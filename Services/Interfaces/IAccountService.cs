@@ -1,0 +1,15 @@
+﻿using Repositories.ViewModels.AccountModels;
+using Repositories.ViewModels.ResponseModels;
+using Repositories.ViewModels.TokenModels;
+
+namespace Services.Interfaces
+{
+	public interface IAccountService
+	{
+		Task<ResponseModel> Register(AccountRegisterModel accountRegisterModel);
+		Task<ResponseDataModel<TokenModel>> Login(AccountLoginModel accountLoginModel);
+		Task<ResponseDataModel<TokenModel>> RefreshToken(RefreshTokenModel refreshTokenModel);
+		Task<ResponseModel> VerifyEmail(string email, string verificationCode);
+		Task<ResponseModel> ResendVerificationEmail(string email);
+	}
+}
