@@ -284,9 +284,23 @@ namespace Services.Services
 			{
 				user = await _userManager.FindByIdAsync(currentUserId.ToString());
 			}
+			else if (email != null && currentUserId != null)
+			{
+				user = await _userManager.FindByEmailAsync(email);
 
-            if (user.EmailConfirmed)
-            {
+				if (user == null || user.Id != currentUserId)
+				{
+					return new ResponseModel
+					{
+						Status = true,
+						Message = "Cannot resend Verification Email",
+						EmailVerificationRequired = true
+					};
+				}
+			}
+
+			if (user.EmailConfirmed)
+			{
 				return new ResponseModel
 				{
 					Status = true,

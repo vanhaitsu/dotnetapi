@@ -15,12 +15,6 @@ namespace API
 {
 	public static class Configuration
 	{
-		/*
-			References
-			JWT: https://www.c-sharpcorner.com/article/jwt-authentication-with-refresh-tokens-in-net-6-0
-			Email Confirmation: https://webtutorialstack.com/dot-net-framework/email-confirmation-with-asp-net-core-identity/
-		*/
-
 		public static IServiceCollection AddAPIConfiguration(this IServiceCollection services)
 		{
 			// Identity
