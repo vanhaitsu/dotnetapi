@@ -19,10 +19,18 @@ namespace API
 		{
 			// Identity
 			services
-				.AddIdentity<Account, Role>()
+				.AddIdentity<Account, Role>(options =>
+				{
+					options.Password.RequireNonAlphanumeric = false;
+					options.Password.RequiredLength = 8;
+				})
 				.AddRoles<Role>()
 				.AddEntityFrameworkStores<AppDbContext>()
 				.AddDefaultTokenProviders();
+			services.Configure<DataProtectionTokenProviderOptions>(options =>
+			{
+				options.TokenLifespan = TimeSpan.FromMinutes(15);
+			});
 
 			// Middlewares
 			services.AddSingleton<GlobalExceptionMiddleware>();

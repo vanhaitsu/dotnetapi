@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Repositories.ViewModels.AccountModels;
+using Repositories.ViewModels.CommonModels;
 using Repositories.ViewModels.TokenModels;
 using Services.Interfaces;
 
@@ -100,12 +102,76 @@ namespace API.Controllers
 			}
 		}
 
-		[HttpGet("resend-verification-email")]
-		public async Task<IActionResult> ResendVerificationEmail([FromQuery] string? email)
+		[HttpPost("resend-verification-email")]
+		public async Task<IActionResult> ResendVerificationEmail([FromBody] EmailModel emailModel)
 		{
 			try
 			{
-				var result = await _accountService.ResendVerificationEmail(email);
+				var result = await _accountService.ResendVerificationEmail(emailModel);
+				if (result.Status)
+				{
+					return Ok(result);
+				}
+				else
+				{
+					return BadRequest(result);
+				}
+			}
+			catch (Exception ex)
+			{
+				return BadRequest(ex);
+			}
+		}
+
+		[HttpPost("change-password")]
+		[Authorize]
+		public async Task<IActionResult> ChangePassword([FromBody] AccountChangePasswordModel accountChangePasswordModel)
+		{
+			try
+			{
+				var result = await _accountService.ChangePassword(accountChangePasswordModel);
+				if (result.Status)
+				{
+					return Ok(result);
+				}
+				else
+				{
+					return BadRequest(result);
+				}
+			}
+			catch (Exception ex)
+			{
+				return BadRequest(ex);
+			}
+		}
+
+		[HttpPost("forgot-password")]
+		public async Task<IActionResult> ForgotPassword([FromBody] EmailModel emailModel)
+		{
+			try
+			{
+				var result = await _accountService.ForgotPassword(emailModel);
+				if (result.Status)
+				{
+					return Ok(result);
+				}
+				else
+				{
+					return BadRequest(result);
+				}
+			}
+			catch (Exception ex)
+			{
+				return BadRequest(ex);
+			}
+		}
+
+		[HttpPost("reset-password")]
+		public async Task<IActionResult> ResetPassword([FromBody] AccountResetPasswordModel accountResetPasswordModel)
+		{
+			try
+			{
+				var result = await _accountService.ResetPassword(accountResetPasswordModel);
 				if (result.Status)
 				{
 					return Ok(result);

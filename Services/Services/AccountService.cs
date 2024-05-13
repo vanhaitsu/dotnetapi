@@ -5,6 +5,7 @@ using Repositories.Entities;
 using Repositories.Interfaces;
 using Repositories.Utils;
 using Repositories.ViewModels.AccountModels;
+using Repositories.ViewModels.CommonModels;
 using Repositories.ViewModels.ResponseModels;
 using Repositories.ViewModels.TokenModels;
 using Services.Interfaces;
@@ -57,7 +58,7 @@ namespace Services.Services
 
 			if (result.Succeeded)
 			{
-				// Email verification
+				// Email verification (Disable this function if Users are not required to verify their Email)
 				await SendVerificationEmail(user);
 
 				return new ResponseModel
@@ -252,47 +253,47 @@ namespace Services.Services
 			};
 		}
 
-		public async Task<ResponseModel> ResendVerificationEmail(string email)
+		public async Task<ResponseModel> ResendVerificationEmail(EmailModel emailModel)
 		{
 			var currentUserId = _claimsService.GetCurrentUserId;
 
-			if (email == null && currentUserId == null)
+			if (emailModel == null && currentUserId == null)
 			{
 				return new ResponseModel
 				{
-					Status = true,
+					Status = false,
 					Message = "User not found",
 				};
 			}
 
 			Account user = null;
 
-			if (email != null && currentUserId == null)
+			if (emailModel != null && currentUserId == null)
 			{
-				user = await _userManager.FindByEmailAsync(email);
+				user = await _userManager.FindByEmailAsync(emailModel.Email);
 
 				if (user == null)
 				{
 					return new ResponseModel
 					{
-						Status = true,
+						Status = false,
 						Message = "User not found",
 					};
 				}
 			}
-			else if (email == null && currentUserId != null)
+			else if (emailModel == null && currentUserId != null)
 			{
 				user = await _userManager.FindByIdAsync(currentUserId.ToString());
 			}
-			else if (email != null && currentUserId != null)
+			else if (emailModel != null && currentUserId != null)
 			{
-				user = await _userManager.FindByEmailAsync(email);
+				user = await _userManager.FindByEmailAsync(emailModel.Email);
 
 				if (user == null || user.Id != currentUserId)
 				{
 					return new ResponseModel
 					{
-						Status = true,
+						Status = false,
 						Message = "Cannot resend Verification Email",
 						EmailVerificationRequired = true
 					};
@@ -303,7 +304,7 @@ namespace Services.Services
 			{
 				return new ResponseModel
 				{
-					Status = true,
+					Status = false,
 					Message = "Email has been verified",
 				};
 			}
@@ -328,9 +329,87 @@ namespace Services.Services
 
 			return new ResponseModel
 			{
-				Status = true,
+				Status = false,
 				Message = "Cannot resend Verification Email",
 				EmailVerificationRequired = true
+			};
+		}
+
+		public async Task<ResponseModel> ChangePassword(AccountChangePasswordModel accountChangePasswordModel)
+		{
+			var currentUserId = _claimsService.GetCurrentUserId;
+			var user = await _userManager.FindByIdAsync(currentUserId.ToString());
+
+			var result = await _userManager.ChangePasswordAsync(user, accountChangePasswordModel.OldPassword, accountChangePasswordModel.NewPassword);
+
+			if (result.Succeeded)
+			{
+				return new ResponseModel
+				{
+					Status = true,
+					Message = "Change Password successfully",
+				};
+			}
+
+			return new ResponseModel
+			{
+				Status = false,
+				Message = "Cannot change Password",
+			};
+		}
+
+		public async Task<ResponseModel> ForgotPassword(EmailModel emailModel)
+		{
+			var user = await _userManager.FindByEmailAsync(emailModel.Email);
+
+			if (user == null)
+			{
+				return new ResponseModel
+				{
+					Status = false,
+					Message = "User not found",
+				};
+			}
+
+			var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+			// todo modify this Email body to send a URL redirect to the frontend page and contain the token as a parameter in the URL
+			await _emailService.SendEmailAsync(user.Email, "Reset your Password", $"Your token is {token}. The token will expire in 15 minutes.", true);
+
+			return new ResponseModel
+			{
+				Status = true,
+				Message = "An Email has been sent, please check your inbox",
+			};
+		}
+
+		public async Task<ResponseModel> ResetPassword(AccountResetPasswordModel accountResetPasswordModel)
+		{
+			var user = await _userManager.FindByEmailAsync(accountResetPasswordModel.Email);
+
+			if (user == null)
+			{
+				return new ResponseModel
+				{
+					Status = false,
+					Message = "User not found",
+				};
+			}
+
+			var result = await _userManager.ResetPasswordAsync(user, accountResetPasswordModel.Token, accountResetPasswordModel.Password);
+
+			if (result.Succeeded)
+			{
+				return new ResponseModel
+				{
+					Status = true,
+					Message = "Reset Password successfully",
+				};
+			}
+
+			return new ResponseModel
+			{
+				Status = false,
+				Message = "Cannot reset Password",
 			};
 		}
 	}
