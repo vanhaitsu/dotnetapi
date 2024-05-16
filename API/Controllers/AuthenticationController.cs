@@ -7,13 +7,13 @@ using Services.Interfaces;
 
 namespace API.Controllers
 {
-	[Route("api/v1/account")]
+	[Route("api/v1/authentication")]
 	[ApiController]
-	public class AccountController : ControllerBase
+	public class AuthenticationController : ControllerBase
 	{
 		private readonly IAccountService _accountService;
 
-		public AccountController(IAccountService accountService)
+		public AuthenticationController(IAccountService accountService)
 		{
 			_accountService = accountService;
 		}

@@ -25,10 +25,12 @@ namespace Services.Common
 				Credentials = new NetworkCredential(FromEmail, Password),
 				EnableSsl = true,
 			};
+
 			MailMessage mailMessage = new MailMessage(FromEmail, toEmail, subject, body)
 			{
 				IsBodyHtml = isBodyHTML
 			};
+
 			return client.SendMailAsync(mailMessage);
 		}
 	}

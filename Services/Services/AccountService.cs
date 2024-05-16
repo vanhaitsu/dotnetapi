@@ -51,8 +51,7 @@ namespace Services.Services
 			var user = _mapper.Map<Account>(accountRegisterModel);
 			user.UserName = user.Email;
 			user.VerificationCode = AuthenticationTools.GenerateVerificationCode(6);
-			_ = int.TryParse(_configuration["VerificationCode:CodeValidityInMinutes"], out int codeValidityInMinutes);
-			user.VerificationCodeExpiryTime = DateTime.Now.AddDays(codeValidityInMinutes);
+			user.VerificationCodeExpiryTime = DateTime.Now.AddMinutes(15);
 
 			var result = await _userManager.CreateAsync(user, accountRegisterModel.Password);
 
@@ -311,8 +310,7 @@ namespace Services.Services
 
 			// Update new Verification Code
 			user.VerificationCode = AuthenticationTools.GenerateVerificationCode(6);
-			_ = int.TryParse(_configuration["VerificationCode:CodeValidityInMinutes"], out int codeValidityInMinutes);
-			user.VerificationCodeExpiryTime = DateTime.Now.AddDays(codeValidityInMinutes);
+			user.VerificationCodeExpiryTime = DateTime.Now.AddMinutes(15);
 			var result = await _userManager.UpdateAsync(user);
 
 			if (result.Succeeded)
