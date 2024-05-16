@@ -47,6 +47,18 @@ namespace API.Controllers
 				var result = await _accountService.Login(accountLoginModel);
 				if (result.Status)
 				{
+					HttpContext.Response.Cookies.Append("refreshToken", result.Data.RefreshToken,
+						new CookieOptions
+						{
+							Expires = DateTimeOffset.UtcNow.AddDays(7),
+							HttpOnly = true,
+							IsEssential = true,
+							Secure = true,
+							SameSite = SameSiteMode.None
+						});
+
+					result.Data.RefreshToken = null;
+
 					return Ok(result);
 				}
 				else
@@ -65,9 +77,22 @@ namespace API.Controllers
 		{
 			try
 			{
-				var result = await _accountService.RefreshToken(refreshTokenModel);
+				HttpContext.Request.Cookies.TryGetValue("refreshToken", out string refreshTokenFromCookie);
+				var result = await _accountService.RefreshToken(refreshTokenModel, refreshTokenFromCookie);
 				if (result.Status)
 				{
+					HttpContext.Response.Cookies.Append("refreshToken", result.Data.RefreshToken,
+						new CookieOptions
+						{
+							Expires = DateTimeOffset.UtcNow.AddDays(7),
+							HttpOnly = true,
+							IsEssential = true,
+							Secure = true,
+							SameSite = SameSiteMode.None
+						});
+
+					result.Data.RefreshToken = null;
+
 					return Ok(result);
 				}
 				else

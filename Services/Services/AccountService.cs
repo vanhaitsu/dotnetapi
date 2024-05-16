@@ -101,7 +101,7 @@ namespace Services.Services
 				}
 
 				// Check if Refresh Token is expired, if so then update
-				if (user.RefreshTokenExpiryTime < DateTime.UtcNow)
+				if (user.RefreshToken == null || user.RefreshTokenExpiryTime < DateTime.UtcNow)
 				{
 					var refreshToken = TokenTools.GenerateRefreshToken();
 					_ = int.TryParse(_configuration["JWT:RefreshTokenValidityInDays"], out int refreshTokenValidityInDays);
@@ -145,7 +145,7 @@ namespace Services.Services
 			};
 		}
 
-		public async Task<ResponseDataModel<TokenModel>> RefreshToken(RefreshTokenModel refreshTokenModel)
+		public async Task<ResponseDataModel<TokenModel>> RefreshToken(RefreshTokenModel refreshTokenModel, string refreshTokenFromCookie)
 		{
 			// Validate Access Token and Refresh Token
 			var principal = TokenTools.GetPrincipalFromExpiredToken(refreshTokenModel.AccessToken, _configuration);
@@ -161,7 +161,7 @@ namespace Services.Services
 
 			var user = await _userManager.FindByIdAsync(principal.FindFirst("userId").Value);
 
-			if (user == null || user.RefreshToken != refreshTokenModel.RefreshToken || user.RefreshTokenExpiryTime <= DateTime.Now)
+			if (user == null || user.RefreshToken != refreshTokenFromCookie || user.RefreshTokenExpiryTime <= DateTime.Now)
 			{
 				return new ResponseDataModel<TokenModel>
 				{

@@ -1,4 +1,5 @@
 using API;
+using API.Middlewares;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -33,6 +34,12 @@ builder.Services.AddAuthentication(options =>
 	options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
 	options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 	options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+}).AddCookie(options =>
+{
+	options.Cookie.Name = "refreshToken";
+	options.Cookie.HttpOnly = true; // Ensure HTTP-only cookie
+	options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // Make sure to send only over HTTPS
+	options.SlidingExpiration = true; // Renew the cookie expiration time on each request
 }).AddJwtBearer(options =>
 {
 	options.SaveToken = true;
@@ -49,7 +56,22 @@ builder.Services.AddAuthentication(options =>
 	};
 });
 
+builder.Services.AddCors(options =>
+{
+	options.AddPolicy("cors",
+		builder =>
+		{
+			builder.AllowAnyOrigin()
+			.AllowAnyHeader()
+			.WithExposedHeaders("X-Pagination")
+			.AllowAnyMethod();
+		});
+});
+
 var app = builder.Build();
+
+// Allow CORS
+app.UseCors("cors");
 
 //Initial Seeding
 using (var scope = app.Services.CreateScope())
@@ -57,6 +79,10 @@ using (var scope = app.Services.CreateScope())
 	var services = scope.ServiceProvider;
 	await InitialSeeding.Initialize(services);
 }
+
+// Middleware
+app.UseMiddleware<GlobalExceptionMiddleware>();
+app.UseMiddleware<PerformanceMiddleware>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
