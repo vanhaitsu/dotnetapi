@@ -10,5 +10,6 @@
 
 		// Optional
 		public bool? EmailVerificationRequired { get; set; }
+		public bool? IsBlocked { get; set; }
 	}
 }

@@ -211,5 +211,38 @@ namespace API.Controllers
 				return BadRequest(ex);
 			}
 		}
+
+		[HttpPost("login-google")]
+		public async Task<IActionResult> LoginGoogle([FromBody] LoginGoogleIdTokenModel loginGoogleIdTokenModel)
+		{
+			try
+			{
+				var result = await _accountService.LoginGoogle(loginGoogleIdTokenModel);
+				if (result.Status)
+				{
+					HttpContext.Response.Cookies.Append("refreshToken", result.Data.RefreshToken,
+						new CookieOptions
+						{
+							Expires = DateTimeOffset.UtcNow.AddDays(7),
+							HttpOnly = true,
+							IsEssential = true,
+							Secure = true,
+							SameSite = SameSiteMode.None
+						});
+
+					result.Data.RefreshToken = null;
+
+					return Ok(result);
+				}
+				else
+				{
+					return BadRequest(result);
+				}
+			}
+			catch (Exception ex)
+			{
+				return BadRequest(ex);
+			}
+		}
 	}
 }

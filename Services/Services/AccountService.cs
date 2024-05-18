@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Google.Apis.Auth;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Repositories.Entities;
@@ -222,7 +223,7 @@ namespace Services.Services
 				return new ResponseModel
 				{
 					Status = false,
-					Message = "The Code is expired",
+					Message = "The code is expired",
 					EmailVerificationRequired = false
 				};
 			}
@@ -308,7 +309,7 @@ namespace Services.Services
 				};
 			}
 
-			// Update new Verification Code
+			// Update new Verification IdToken
 			user.VerificationCode = AuthenticationTools.GenerateVerificationCode(6);
 			user.VerificationCodeExpiryTime = DateTime.Now.AddMinutes(15);
 			var result = await _userManager.UpdateAsync(user);
@@ -408,6 +409,89 @@ namespace Services.Services
 			{
 				Status = false,
 				Message = "Cannot reset Password",
+			};
+		}
+
+		public async Task<ResponseDataModel<TokenModel>> LoginGoogle(LoginGoogleIdTokenModel loginGoogleIdTokenModel)
+		{
+			var settings = new GoogleJsonWebSignature.ValidationSettings()
+			{
+				Audience = new List<string> { _configuration["OAuth2:Google:ClientId"] }
+			};
+
+			var payload = await GoogleJsonWebSignature.ValidateAsync(loginGoogleIdTokenModel.IdToken, settings);
+
+			if (payload == null)
+			{
+				return new ResponseDataModel<TokenModel>
+				{
+					Status = false,
+					Message = "Invalid credentials",
+				};
+			}
+
+			// Use payload based on need
+			var user = await _userManager.FindByEmailAsync(payload.Email);
+
+			if (user == null)
+			{
+				return new ResponseDataModel<TokenModel>
+				{
+					Status = false,
+					Message = "User not found"
+				};
+			}
+
+			// JWT Token
+			var authClaims = new List<Claim>
+				{
+					new Claim("userId", user.Id.ToString()),
+					new Claim("userEmail", user.Email.ToString()),
+					new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+				};
+
+			var userRoles = await _userManager.GetRolesAsync(user);
+
+			foreach (var userRole in userRoles)
+			{
+				authClaims.Add(new Claim(ClaimTypes.Role, userRole));
+			}
+
+			// Check if Refresh Token is expired, if so then update
+			if (user.RefreshToken == null || user.RefreshTokenExpiryTime < DateTime.UtcNow)
+			{
+				var refreshToken = TokenTools.GenerateRefreshToken();
+				_ = int.TryParse(_configuration["JWT:RefreshTokenValidityInDays"], out int refreshTokenValidityInDays);
+
+				// Update User's Refresh Token
+				user.RefreshToken = refreshToken;
+				user.RefreshTokenExpiryTime = DateTime.Now.AddDays(refreshTokenValidityInDays);
+
+				var result = await _userManager.UpdateAsync(user);
+
+				if (!result.Succeeded)
+				{
+					return new ResponseDataModel<TokenModel>
+					{
+						Status = false,
+						Message = "Cannot login"
+					};
+				}
+			}
+
+			var jwtToken = TokenTools.CreateJWTToken(authClaims, _configuration);
+
+			return new ResponseDataModel<TokenModel>
+			{
+				Status = true,
+				Message = "Login successfully",
+				EmailVerificationRequired = !user.EmailConfirmed,
+				Data = new TokenModel
+				{
+					AccessToken = new JwtSecurityTokenHandler().WriteToken(jwtToken),
+					AccessTokenExpiryTime = jwtToken.ValidTo.ToLocalTime(),
+					RefreshToken = user.RefreshToken,
+				}
 			};
 		}
 	}

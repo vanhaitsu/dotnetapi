@@ -40,6 +40,10 @@ builder.Services.AddAuthentication(options =>
 	options.Cookie.HttpOnly = true; // Ensure HTTP-only cookie
 	options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // Make sure to send only over HTTPS
 	options.SlidingExpiration = true; // Renew the cookie expiration time on each request
+}).AddGoogle(options =>
+{
+	options.ClientId = builder.Configuration["OAuth2:Google:ClientId"];
+	options.ClientSecret = builder.Configuration["OAuth2:Google:ClientSecret"];
 }).AddJwtBearer(options =>
 {
 	options.SaveToken = true;
@@ -61,10 +65,13 @@ builder.Services.AddCors(options =>
 	options.AddPolicy("cors",
 		builder =>
 		{
-			builder.AllowAnyOrigin()
+			builder
+			//.AllowAnyOrigin()
+			.WithOrigins("http://localhost:5173")
 			.AllowAnyHeader()
 			.WithExposedHeaders("X-Pagination")
-			.AllowAnyMethod();
+			.AllowAnyMethod()
+			.AllowCredentials();
 		});
 });
 
