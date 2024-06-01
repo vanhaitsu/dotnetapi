@@ -9,7 +9,7 @@ namespace Repositories.Common
 	/// </summary>
 	public class InitialSeeding
 	{
-		private static readonly string[] roles = ["Administrator", "User"];
+		private static readonly string[] roles = [Enums.Role.Administrator.ToString(), Enums.Role.User.ToString()];
 
 		public static async Task Initialize(IServiceProvider serviceProvider)
 		{

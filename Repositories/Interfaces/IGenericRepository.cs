@@ -12,6 +12,8 @@ namespace Repositories.Interfaces
 		void UpdateRange(List<TEntity> entities);
 		void SoftDelete(TEntity entity);
 		void SoftDeleteRange(List<TEntity> entities);
+		void Restore(TEntity entity);
+		void RestoreRange(List<TEntity> entities);
 		void HardDelete(TEntity entity);
 		void HardDeleteRange(List<TEntity> entities);
 	}

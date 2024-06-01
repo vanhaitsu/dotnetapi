@@ -79,6 +79,29 @@ namespace Repositories.Repositories
 			_dbSet.UpdateRange(entities);
 		}
 
+		public void Restore(TEntity entity)
+		{
+			entity.IsDeleted = false;
+			entity.DeletionDate = null;
+			entity.DeletedBy = null;
+			entity.ModificationDate = DateTime.UtcNow;
+			entity.ModifiedBy = _claimsService.GetCurrentUserId;
+			_dbSet.Update(entity);
+		}
+
+		public void RestoreRange(List<TEntity> entities)
+		{
+			foreach (var entity in entities)
+			{
+				entity.IsDeleted = false;
+				entity.DeletionDate = null;
+				entity.DeletedBy = null;
+				entity.ModificationDate = DateTime.UtcNow;
+				entity.ModifiedBy = _claimsService.GetCurrentUserId;
+			}
+			_dbSet.UpdateRange(entities);
+		}
+
 		public void HardDelete(TEntity entity)
 		{
 			_dbSet.Remove(entity);
