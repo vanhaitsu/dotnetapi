@@ -4,28 +4,28 @@ using Repositories.Entities;
 
 namespace Repositories.Common
 {
-	/// <summary>
-	/// This class is used to insert initial data
-	/// </summary>
-	public class InitialSeeding
-	{
-		private static readonly string[] roles = [Enums.Role.Administrator.ToString(), Enums.Role.User.ToString()];
+    /// <summary>
+    /// This class is used to insert initial data
+    /// </summary>
+    public class InitialSeeding
+    {
+        private static readonly string[] RoleList = [Enums.Role.Administrator.ToString(), Enums.Role.User.ToString()];
 
-		public static async Task Initialize(IServiceProvider serviceProvider)
-		{
-			var _roleManager = serviceProvider.GetRequiredService<RoleManager<Role>>();
+        public static async Task Initialize(IServiceProvider serviceProvider)
+        {
+            var roleManager = serviceProvider.GetRequiredService<RoleManager<Role>>();
 
-			if (_roleManager != null)
-			{
-				foreach (string role in roles)
-				{
-					Role? existedRole = await _roleManager.FindByNameAsync(role);
-					if (existedRole == null)
-					{
-						await _roleManager.CreateAsync(new Role { Name = role });
-					}
-				}
-			}
-		}
-	}
+            if (roleManager != null)
+            {
+                foreach (string role in RoleList)
+                {
+                    Role? existedRole = await roleManager.FindByNameAsync(role);
+                    if (existedRole == null)
+                    {
+                        await roleManager.CreateAsync(new Role { Name = role });
+                    }
+                }
+            }
+        }
+    }
 }

@@ -1,6 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Linq.Expressions;
+using Microsoft.EntityFrameworkCore;
+using Repositories.Common;
 using Repositories.Entities;
 using Repositories.Interfaces;
+using Repositories.Models.QueryModels;
 
 namespace Repositories.Repositories
 {
@@ -22,9 +25,54 @@ namespace Repositories.Repositories
 			return result;
 		}
 
-		public Task<List<TEntity>> GetAllAsync()
+		public async Task<List<TEntity>> GetAllAsync()
 		{
-			return _dbSet.ToListAsync();
+			return await _dbSet.ToListAsync();
+		}
+		
+		public async Task<QueryResultModel<List<TEntity>>> GetAllAsync(
+			Expression<Func<TEntity, bool>> filter = null,
+			Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
+			string include = "",
+			int? pageIndex = null,
+			int? pageSize = null)
+		{
+			int totalCount = 0;
+            
+			IQueryable<TEntity> query = _dbSet;
+
+			if (filter != null)
+			{
+				query = query.Where(filter);
+			}
+
+			foreach (var includeProperty in include.Split
+				         (new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+			{
+				query = query.Include(includeProperty.Trim());
+			}
+
+			if (orderBy != null)
+			{
+				query = orderBy(query);
+			}
+			
+			if (pageIndex.HasValue && pageSize.HasValue)
+			{
+				int validPageIndex = pageIndex.Value > 0 ? pageIndex.Value - 1 : 0;
+				int validPageSize =
+					pageSize.Value > 0
+						? pageSize.Value
+						: PaginationConstant.DEFAULT_MIN_PAGE_SIZE;
+
+				query = query.Skip(validPageIndex * validPageSize).Take(validPageSize);
+			}
+
+			return new QueryResultModel<List<TEntity>>()
+			{
+				TotalCount = totalCount,
+				Data = await query.ToListAsync(),
+			};
 		}
 
 		public async Task AddAsync(TEntity entity)
@@ -43,6 +91,7 @@ namespace Repositories.Repositories
 			}
 			await _dbSet.AddRangeAsync(entities);
 		}
+		
 		public void Update(TEntity entity)
 		{
 			entity.ModificationDate = DateTime.UtcNow;

@@ -1,4 +1,6 @@
-﻿using Repositories.Entities;
+﻿using System.Linq.Expressions;
+using Repositories.Entities;
+using Repositories.Models.QueryModels;
 
 namespace Repositories.Interfaces
 {
@@ -6,6 +8,13 @@ namespace Repositories.Interfaces
 	{
 		Task<TEntity?> GetAsync(Guid id);
 		Task<List<TEntity>> GetAllAsync();
+		Task<QueryResultModel<List<TEntity>>> GetAllAsync(
+			Expression<Func<TEntity, bool>> filter = null,
+			Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
+			string include = "",
+			int? pageIndex = null,
+			int? pageSize = null
+		);
 		Task AddAsync(TEntity entity);
 		Task AddRangeAsync(List<TEntity> entities);
 		void Update(TEntity entity);
