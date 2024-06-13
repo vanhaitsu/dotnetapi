@@ -72,7 +72,7 @@ namespace API.Controllers
 			}
 		}
 
-		[HttpPost("refresh-token")]
+		[HttpPost("token/refresh")]
 		public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenModel refreshTokenModel)
 		{
 			try
@@ -106,7 +106,7 @@ namespace API.Controllers
 			}
 		}
 
-		[HttpGet("verify-email")]
+		[HttpGet("email/verify")]
 		public async Task<IActionResult> VerifyEmail([FromQuery] string email, [FromQuery] string verificationCode)
 		{
 			try
@@ -127,7 +127,7 @@ namespace API.Controllers
 			}
 		}
 
-		[HttpPost("resend-verification-email")]
+		[HttpPost("email/resend-verification")]
 		public async Task<IActionResult> ResendVerificationEmail([FromBody] EmailModel emailModel)
 		{
 			try
@@ -148,7 +148,7 @@ namespace API.Controllers
 			}
 		}
 
-		[HttpPost("change-password")]
+		[HttpPost("password/change")]
 		[Authorize]
 		public async Task<IActionResult> ChangePassword([FromBody] AccountChangePasswordModel accountChangePasswordModel)
 		{
@@ -170,7 +170,7 @@ namespace API.Controllers
 			}
 		}
 
-		[HttpPost("forgot-password")]
+		[HttpPost("password/forgot")]
 		public async Task<IActionResult> ForgotPassword([FromBody] EmailModel emailModel)
 		{
 			try
@@ -191,7 +191,7 @@ namespace API.Controllers
 			}
 		}
 
-		[HttpPost("reset-password")]
+		[HttpPost("password/reset")]
 		public async Task<IActionResult> ResetPassword([FromBody] AccountResetPasswordModel accountResetPasswordModel)
 		{
 			try
@@ -212,7 +212,7 @@ namespace API.Controllers
 			}
 		}
 
-		[HttpPost("login-google")]
+		[HttpPost("login/google")]
 		public async Task<IActionResult> LoginGoogle([FromBody] LoginGoogleIdTokenModel loginGoogleIdTokenModel)
 		{
 			try
