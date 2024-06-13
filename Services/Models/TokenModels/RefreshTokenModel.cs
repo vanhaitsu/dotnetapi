@@ -6,5 +6,6 @@ namespace Repositories.ViewModels.TokenModels
 	{
 		[Required(ErrorMessage = "Access Token is required")]
 		public string AccessToken { get; set; }
-	}
+        public string? RefreshToken { get; set; }
+    }
 }

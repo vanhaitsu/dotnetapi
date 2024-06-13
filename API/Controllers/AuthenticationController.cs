@@ -78,20 +78,29 @@ namespace API.Controllers
 			try
 			{
 				HttpContext.Request.Cookies.TryGetValue("refreshToken", out string refreshTokenFromCookie);
-				var result = await _accountService.RefreshToken(refreshTokenModel, refreshTokenFromCookie);
+
+				if (refreshTokenFromCookie != null)
+				{
+					refreshTokenModel.RefreshToken = refreshTokenFromCookie;
+				}
+
+                var result = await _accountService.RefreshToken(refreshTokenModel);
 				if (result.Status)
 				{
-					HttpContext.Response.Cookies.Append("refreshToken", result.Data.RefreshToken,
-						new CookieOptions
-						{
-							Expires = DateTimeOffset.UtcNow.AddDays(7),
-							HttpOnly = true,
-							IsEssential = true,
-							Secure = true,
-							SameSite = SameSiteMode.None
-						});
+					if (refreshTokenFromCookie != null)
+					{
+                        HttpContext.Response.Cookies.Append("refreshToken", result.Data.RefreshToken,
+                        new CookieOptions
+                        {
+                            Expires = DateTimeOffset.UtcNow.AddDays(7),
+                            HttpOnly = true,
+                            IsEssential = true,
+                            Secure = true,
+                            SameSite = SameSiteMode.None
+                        });
 
-					result.Data.RefreshToken = null;
+                        result.Data.RefreshToken = null;
+                    }
 
 					return Ok(result);
 				}
