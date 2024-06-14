@@ -221,25 +221,25 @@ namespace API.Controllers
 			}
 		}
 
-		[HttpPost("login/google")]
-		public async Task<IActionResult> LoginGoogle([FromBody] LoginGoogleIdTokenModel loginGoogleIdTokenModel)
+		[HttpGet("login/google")]
+		public async Task<IActionResult> LoginGoogle([FromQuery] string code)
 		{
 			try
 			{
-				var result = await _accountService.LoginGoogle(loginGoogleIdTokenModel);
+				var result = await _accountService.LoginGoogle(code);
 				if (result.Status)
 				{
-					HttpContext.Response.Cookies.Append("refreshToken", result.Data.RefreshToken,
-						new CookieOptions
-						{
-							Expires = DateTimeOffset.UtcNow.AddDays(7),
-							HttpOnly = true,
-							IsEssential = true,
-							Secure = true,
-							SameSite = SameSiteMode.None
-						});
+					//HttpContext.Response.Cookies.Append("refreshToken", result.Data.RefreshToken,
+					//	new CookieOptions
+					//	{
+					//		Expires = DateTimeOffset.UtcNow.AddDays(7),
+					//		HttpOnly = true,
+					//		IsEssential = true,
+					//		Secure = true,
+					//		SameSite = SameSiteMode.None
+					//	});
 
-					result.Data.RefreshToken = null;
+					//result.Data.RefreshToken = null;
 
 					return Ok(result);
 				}

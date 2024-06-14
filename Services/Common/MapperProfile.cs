@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Repositories.Entities;
 using Repositories.ViewModels.AccountModels;
+using Services.Models.CommonModels;
 
 namespace Repositories.Common
 {
@@ -10,6 +11,7 @@ namespace Repositories.Common
 		{
 			//Account
 			CreateMap<AccountRegisterModel, Account>();
+			CreateMap<GoogleUserInformationModel, Account>();
 		}
 	}
 }
