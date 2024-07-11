@@ -46,6 +46,8 @@ namespace Repositories.Repositories
 				query = query.Where(filter);
 			}
 
+			totalCount = await query.CountAsync();
+
 			foreach (var includeProperty in include.Split
 				         (new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
 			{
