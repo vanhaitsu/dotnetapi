@@ -36,9 +36,7 @@ namespace Repositories.Repositories
 			string include = "",
 			int? pageIndex = null,
 			int? pageSize = null)
-		{
-			int totalCount = 0;
-            
+		{   
 			IQueryable<TEntity> query = _dbSet;
 
 			if (filter != null)
@@ -46,7 +44,7 @@ namespace Repositories.Repositories
 				query = query.Where(filter);
 			}
 
-			totalCount = await query.CountAsync();
+			int totalCount = await query.CountAsync();
 
 			foreach (var includeProperty in include.Split
 				         (new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
