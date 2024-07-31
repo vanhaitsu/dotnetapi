@@ -5,7 +5,7 @@ namespace Repositories.Utils
 {
 	public class AuthenticationTools
 	{
-		private static Random random = new Random();
+		private static readonly Random Random = new Random();
 
 		public static string GenerateVerificationCode(int length)
 		{
@@ -14,13 +14,13 @@ namespace Repositories.Utils
 
 			for (int i = 0; i < length; i++)
 			{
-				otp.Append(chars[random.Next(chars.Length)]);
+				otp.Append(chars[Random.Next(chars.Length)]);
 			}
 
 			return otp.ToString();
 		}
 
-		public static Guid? GetCurrentUserId(ClaimsIdentity claimsIdentity)
+		public static Guid? GetCurrentUserId(ClaimsIdentity? claimsIdentity)
 		{
 			if (claimsIdentity != null)
 			{

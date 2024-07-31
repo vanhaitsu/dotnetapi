@@ -1,9 +1,9 @@
 ﻿using AutoMapper;
 using Repositories.Entities;
-using Repositories.ViewModels.AccountModels;
+using Services.Models.AccountModels;
 using Services.Models.CommonModels;
 
-namespace Repositories.Common
+namespace Services.Common
 {
 	public class MapperProfile : Profile
 	{

@@ -1,9 +1,9 @@
-﻿namespace Repositories.ViewModels.TokenModels
+﻿namespace Services.Models.TokenModels
 {
-	public class TokenModel
-	{
-		public string AccessToken { get; set; }
-		public DateTime AccessTokenExpiryTime { get; set; }
-		public string? RefreshToken { get; set; }
-	}
+    public class TokenModel
+    {
+        public required string AccessToken { get; set; }
+        public DateTime AccessTokenExpiryTime { get; set; }
+        public string? RefreshToken { get; set; }
+    }
 }

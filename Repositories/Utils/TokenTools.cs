@@ -11,7 +11,7 @@ namespace Repositories.Utils
 	{
 		public static JwtSecurityToken CreateJWTToken(List<Claim> authClaims, IConfiguration configuration)
 		{
-			var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWT:Secret"]));
+			var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWT:Secret"]!));
 			_ = int.TryParse(configuration["JWT:TokenValidityInMinutes"], out int tokenValidityInMinutes);
 
 			var token = new JwtSecurityToken(
@@ -33,7 +33,7 @@ namespace Repositories.Utils
 			return Convert.ToBase64String(randomNumber);
 		}
 
-		public static ClaimsPrincipal GetPrincipalFromExpiredToken(string? accessToken, IConfiguration configuration)
+		public static ClaimsPrincipal? GetPrincipalFromExpiredToken(string? accessToken, IConfiguration configuration)
 		{
 			try
 			{
@@ -42,7 +42,7 @@ namespace Repositories.Utils
 					ValidateAudience = false,
 					ValidateIssuer = false,
 					ValidateIssuerSigningKey = true,
-					IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWT:Secret"])),
+					IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWT:Secret"]!)),
 					ValidateLifetime = false
 				};
 
@@ -56,7 +56,7 @@ namespace Repositories.Utils
 
 				return principal;
 			}
-			catch (Exception ex)
+			catch (Exception)
 			{
 				return null;
 			}

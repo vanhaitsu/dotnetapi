@@ -9,21 +9,18 @@ namespace Repositories.Common
     /// </summary>
     public class InitialSeeding
     {
-        private static readonly string[] RoleList = [Enums.Role.Administrator.ToString(), Enums.Role.User.ToString()];
+        private static readonly string[] RoleList = [Enums.Role.Admin.ToString(), Enums.Role.User.ToString()];
 
         public static async Task Initialize(IServiceProvider serviceProvider)
         {
             var roleManager = serviceProvider.GetRequiredService<RoleManager<Role>>();
 
-            if (roleManager != null)
+            foreach (string role in RoleList)
             {
-                foreach (string role in RoleList)
+                Role? existedRole = await roleManager.FindByNameAsync(role);
+                if (existedRole == null)
                 {
-                    Role? existedRole = await roleManager.FindByNameAsync(role);
-                    if (existedRole == null)
-                    {
-                        await roleManager.CreateAsync(new Role { Name = role });
-                    }
+                    await roleManager.CreateAsync(new Role { Name = role });
                 }
             }
         }

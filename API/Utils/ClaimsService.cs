@@ -1,8 +1,8 @@
-﻿using Repositories.Interfaces;
+﻿using System.Security.Claims;
+using Repositories.Interfaces;
 using Repositories.Utils;
-using System.Security.Claims;
 
-namespace API.Services
+namespace API.Utils
 {
     public class ClaimsService : IClaimsService
     {
@@ -11,7 +11,7 @@ namespace API.Services
 		public ClaimsService(IHttpContextAccessor httpContextAccessor)
         {
             var identity = httpContextAccessor.HttpContext?.User?.Identity as ClaimsIdentity;
-			GetCurrentUserId = AuthenticationTools.GetCurrentUserId(identity);
+			GetCurrentUserId = AuthenticationTools.GetCurrentUserId(identity!);
         }
     }
 }

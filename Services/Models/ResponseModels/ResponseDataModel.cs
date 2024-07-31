@@ -1,4 +1,4 @@
-﻿namespace Repositories.ViewModels.ResponseModels
+﻿namespace Services.Models.ResponseModels
 {
 	/// <summary>
 	/// Use this model for responses that require additional data

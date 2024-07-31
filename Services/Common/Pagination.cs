@@ -1,4 +1,4 @@
-﻿namespace Repositories.Common;
+﻿namespace Services.Common;
 
 public class Pagination<T> : List<T>
 {

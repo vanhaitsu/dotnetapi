@@ -1,7 +1,7 @@
-﻿using Repositories.ViewModels.AccountModels;
-using Repositories.ViewModels.CommonModels;
-using Repositories.ViewModels.ResponseModels;
-using Repositories.ViewModels.TokenModels;
+﻿using Services.Models.AccountModels;
+using Services.Models.CommonModels;
+using Services.Models.ResponseModels;
+using Services.Models.TokenModels;
 
 namespace Services.Interfaces
 {

@@ -5,16 +5,15 @@ using Newtonsoft.Json;
 using Repositories.Entities;
 using Repositories.Interfaces;
 using Repositories.Utils;
-using Repositories.ViewModels.AccountModels;
-using Repositories.ViewModels.CommonModels;
-using Repositories.ViewModels.ResponseModels;
-using Repositories.ViewModels.TokenModels;
 using Services.Interfaces;
 using Services.Models.CommonModels;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Claims;
+using Services.Models.AccountModels;
+using Services.Models.ResponseModels;
+using Services.Models.TokenModels;
 
 namespace Services.Services
 {
@@ -27,7 +26,8 @@ namespace Services.Services
         private readonly IEmailService _emailService;
         private readonly IClaimsService _claimsService;
 
-        public AccountService(UserManager<Account> userManager, IUnitOfWork unitOfWork, IMapper mapper, IConfiguration configuration, IEmailService emailService, IClaimsService claimsService)
+        public AccountService(UserManager<Account> userManager, IUnitOfWork unitOfWork, IMapper mapper,
+            IConfiguration configuration, IEmailService emailService, IClaimsService claimsService)
         {
             _userManager = userManager;
             _unitOfWork = unitOfWork;
@@ -39,7 +39,7 @@ namespace Services.Services
 
         public async Task<ResponseModel> Register(AccountRegisterModel accountRegisterModel)
         {
-            // Check if Email already exists
+            // Check if email already exists
             var existedEmail = await _userManager.FindByEmailAsync(accountRegisterModel.Email);
 
             if (existedEmail != null)
@@ -51,7 +51,7 @@ namespace Services.Services
                 };
             }
 
-            // Create new Account
+            // Create new account
             var user = _mapper.Map<Account>(accountRegisterModel);
             user.UserName = user.Email;
             user.VerificationCode = AuthenticationTools.GenerateVerificationCode(6);
@@ -61,13 +61,16 @@ namespace Services.Services
 
             if (result.Succeeded)
             {
-                // Email verification (Disable this function if Users are not required to verify their Email)
+                // Add role
+                await _userManager.AddToRoleAsync(user, Repositories.Enums.Role.User.ToString());
+
+                // Email verification (disable this function if users are not required to verify their email)
                 await SendVerificationEmail(user);
 
                 return new ResponseModel
                 {
                     Status = true,
-                    Message = "Account has been created successfully, please verify your Email",
+                    Message = "Account has been created successfully, please verify your email",
                     EmailVerificationRequired = true
                 };
             }
@@ -75,71 +78,85 @@ namespace Services.Services
             return new ResponseModel
             {
                 Status = false,
-                Message = "Cannot create Account"
+                Message = "Cannot create account"
             };
         }
 
         private async Task SendVerificationEmail(Account account)
         {
-            await _emailService.SendEmailAsync(account.Email, "Verify your Email", $"Your verification code is {account.VerificationCode}. The code will expire in 15 minutes.", true);
+            await _emailService.SendEmailAsync(account.Email!, "Verify your email",
+                $"Your verification code is {account.VerificationCode}. The code will expire in 15 minutes.", true);
         }
 
         public async Task<ResponseDataModel<TokenModel>> Login(AccountLoginModel accountLoginModel)
         {
             var user = await _userManager.FindByNameAsync(accountLoginModel.Email);
 
-            if (user != null && await _userManager.CheckPasswordAsync(user, accountLoginModel.Password))
+            if (user != null)
             {
-                var authClaims = new List<Claim>
+                if (user.IsDeleted)
                 {
-                    new Claim("userId", user.Id.ToString()),
-                    new Claim("userEmail", user.Email.ToString()),
-                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                };
-
-                var userRoles = await _userManager.GetRolesAsync(user);
-
-                foreach (var userRole in userRoles)
-                {
-                    authClaims.Add(new Claim(ClaimTypes.Role, userRole));
+                    return new ResponseDataModel<TokenModel>
+                    {
+                        Status = false,
+                        Message = "Account has been deleted"
+                    };
                 }
 
-                // Check if Refresh Token is expired, if so then update
-                if (user.RefreshToken == null || user.RefreshTokenExpiryTime < DateTime.UtcNow)
+                if (await _userManager.CheckPasswordAsync(user, accountLoginModel.Password))
                 {
-                    var refreshToken = TokenTools.GenerateRefreshToken();
-                    _ = int.TryParse(_configuration["JWT:RefreshTokenValidityInDays"], out int refreshTokenValidityInDays);
-
-                    // Update User's Refresh Token
-                    user.RefreshToken = refreshToken;
-                    user.RefreshTokenExpiryTime = DateTime.Now.AddDays(refreshTokenValidityInDays);
-
-                    var result = await _userManager.UpdateAsync(user);
-
-                    if (!result.Succeeded)
+                    var authClaims = new List<Claim>
                     {
-                        return new ResponseDataModel<TokenModel>
+                        new Claim("userId", user.Id.ToString()),
+                        new Claim("userEmail", user.Email!),
+                        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                    };
+
+                    var userRoles = await _userManager.GetRolesAsync(user);
+
+                    foreach (var userRole in userRoles)
+                    {
+                        authClaims.Add(new Claim(ClaimTypes.Role, userRole));
+                    }
+
+                    // Check if refresh token is expired, if so then update
+                    if (user.RefreshToken == null || user.RefreshTokenExpiryTime < DateTime.Now)
+                    {
+                        var refreshToken = TokenTools.GenerateRefreshToken();
+                        _ = int.TryParse(_configuration["JWT:RefreshTokenValidityInDays"],
+                            out int refreshTokenValidityInDays);
+
+                        // Update user's refresh token
+                        user.RefreshToken = refreshToken;
+                        user.RefreshTokenExpiryTime = DateTime.Now.AddDays(refreshTokenValidityInDays);
+
+                        var result = await _userManager.UpdateAsync(user);
+
+                        if (!result.Succeeded)
                         {
-                            Status = false,
-                            Message = "Cannot login"
-                        };
+                            return new ResponseDataModel<TokenModel>
+                            {
+                                Status = false,
+                                Message = "Cannot login"
+                            };
+                        }
                     }
-                }
 
-                var jwtToken = TokenTools.CreateJWTToken(authClaims, _configuration);
+                    var jwtToken = TokenTools.CreateJWTToken(authClaims, _configuration);
 
-                return new ResponseDataModel<TokenModel>
-                {
-                    Status = true,
-                    Message = "Login successfully",
-                    EmailVerificationRequired = !user.EmailConfirmed,
-                    Data = new TokenModel
+                    return new ResponseDataModel<TokenModel>
                     {
-                        AccessToken = new JwtSecurityTokenHandler().WriteToken(jwtToken),
-                        AccessTokenExpiryTime = jwtToken.ValidTo.ToLocalTime(),
-                        RefreshToken = user.RefreshToken,
-                    }
-                };
+                        Status = true,
+                        Message = "Login successfully",
+                        EmailVerificationRequired = !user.EmailConfirmed,
+                        Data = new TokenModel
+                        {
+                            AccessToken = new JwtSecurityTokenHandler().WriteToken(jwtToken),
+                            AccessTokenExpiryTime = jwtToken.ValidTo.ToLocalTime(),
+                            RefreshToken = user.RefreshToken,
+                        }
+                    };
+                }
             }
 
             return new ResponseDataModel<TokenModel>
@@ -151,34 +168,26 @@ namespace Services.Services
 
         public async Task<ResponseDataModel<TokenModel>> RefreshToken(RefreshTokenModel refreshTokenModel)
         {
-            // Validate Access Token and Refresh Token
+            // Validate access token and refresh token
             var principal = TokenTools.GetPrincipalFromExpiredToken(refreshTokenModel.AccessToken, _configuration);
 
-            if (principal == null)
+            var user = await _userManager.FindByIdAsync(principal!.FindFirst("userId")!.Value);
+
+            if (user == null || user.RefreshToken != refreshTokenModel.RefreshToken ||
+                user.RefreshTokenExpiryTime <= DateTime.Now)
             {
                 return new ResponseDataModel<TokenModel>
                 {
                     Status = false,
-                    Message = "Invalid Access Token or Refresh Token"
+                    Message = "Invalid access token or refresh token"
                 };
             }
 
-            var user = await _userManager.FindByIdAsync(principal.FindFirst("userId").Value);
-
-            if (user == null || user.RefreshToken != refreshTokenModel.RefreshToken || user.RefreshTokenExpiryTime <= DateTime.Now)
-            {
-                return new ResponseDataModel<TokenModel>
-                {
-                    Status = false,
-                    Message = "Invalid Access Token or Refresh Token"
-                };
-            }
-
-            // Start to refresh Access Token and Refresh Token
+            // Start to refresh access token and refresh token
             var refreshToken = TokenTools.GenerateRefreshToken();
             _ = int.TryParse(_configuration["JWT:RefreshTokenValidityInDays"], out int refreshTokenValidityInDays);
 
-            // Update User's Refresh Token
+            // Update user's refresh token
             user.RefreshToken = refreshToken;
             user.RefreshTokenExpiryTime = DateTime.Now.AddDays(refreshTokenValidityInDays);
 
@@ -189,7 +198,7 @@ namespace Services.Services
                 return new ResponseDataModel<TokenModel>
                 {
                     Status = false,
-                    Message = "Cannot refresh the Token"
+                    Message = "Cannot refresh the token"
                 };
             }
 
@@ -198,7 +207,7 @@ namespace Services.Services
             return new ResponseDataModel<TokenModel>
             {
                 Status = true,
-                Message = "Refresh Token successfully",
+                Message = "Refresh token successfully",
                 Data = new TokenModel
                 {
                     AccessToken = new JwtSecurityTokenHandler().WriteToken(jwtToken),
@@ -221,7 +230,7 @@ namespace Services.Services
                 };
             }
 
-            if (user.VerificationCodeExpiryTime < DateTime.UtcNow)
+            if (user.VerificationCodeExpiryTime < DateTime.Now)
             {
                 return new ResponseModel
                 {
@@ -244,7 +253,7 @@ namespace Services.Services
                     return new ResponseModel
                     {
                         Status = true,
-                        Message = "Verify Email successfully",
+                        Message = "Verify email successfully",
                     };
                 }
             }
@@ -252,11 +261,11 @@ namespace Services.Services
             return new ResponseModel
             {
                 Status = false,
-                Message = "Cannot verify Email",
+                Message = "Cannot verify email",
             };
         }
 
-        public async Task<ResponseModel> ResendVerificationEmail(EmailModel emailModel)
+        public async Task<ResponseModel> ResendVerificationEmail(EmailModel? emailModel)
         {
             var currentUserId = _claimsService.GetCurrentUserId;
 
@@ -269,7 +278,7 @@ namespace Services.Services
                 };
             }
 
-            Account user = null;
+            Account? user = null;
 
             if (emailModel != null && currentUserId == null)
             {
@@ -286,7 +295,7 @@ namespace Services.Services
             }
             else if (emailModel == null && currentUserId != null)
             {
-                user = await _userManager.FindByIdAsync(currentUserId.ToString());
+                user = await _userManager.FindByIdAsync(currentUserId.ToString()!);
             }
             else if (emailModel != null && currentUserId != null)
             {
@@ -297,13 +306,13 @@ namespace Services.Services
                     return new ResponseModel
                     {
                         Status = false,
-                        Message = "Cannot resend Verification Email",
+                        Message = "Cannot resend verification email",
                         EmailVerificationRequired = true
                     };
                 }
             }
 
-            if (user.EmailConfirmed)
+            if (user!.EmailConfirmed)
             {
                 return new ResponseModel
                 {
@@ -312,7 +321,7 @@ namespace Services.Services
                 };
             }
 
-            // Update new Verification IdToken
+            // Update new verification code
             user.VerificationCode = AuthenticationTools.GenerateVerificationCode(6);
             user.VerificationCodeExpiryTime = DateTime.Now.AddMinutes(15);
             var result = await _userManager.UpdateAsync(user);
@@ -324,7 +333,7 @@ namespace Services.Services
                 return new ResponseModel
                 {
                     Status = true,
-                    Message = "Resend Verification Email successfully",
+                    Message = "Resend Verification email successfully",
                     EmailVerificationRequired = true
                 };
             }
@@ -332,7 +341,7 @@ namespace Services.Services
             return new ResponseModel
             {
                 Status = false,
-                Message = "Cannot resend Verification Email",
+                Message = "Cannot resend verification email",
                 EmailVerificationRequired = true
             };
         }
@@ -340,23 +349,24 @@ namespace Services.Services
         public async Task<ResponseModel> ChangePassword(AccountChangePasswordModel accountChangePasswordModel)
         {
             var currentUserId = _claimsService.GetCurrentUserId;
-            var user = await _userManager.FindByIdAsync(currentUserId.ToString());
+            var user = await _userManager.FindByIdAsync(currentUserId.ToString()!);
 
-            var result = await _userManager.ChangePasswordAsync(user, accountChangePasswordModel.OldPassword, accountChangePasswordModel.NewPassword);
+            var result = await _userManager.ChangePasswordAsync(user!, accountChangePasswordModel.OldPassword,
+                accountChangePasswordModel.NewPassword);
 
             if (result.Succeeded)
             {
                 return new ResponseModel
                 {
                     Status = true,
-                    Message = "Change Password successfully",
+                    Message = "Change password successfully",
                 };
             }
 
             return new ResponseModel
             {
                 Status = false,
-                Message = "Cannot change Password",
+                Message = "Cannot change password",
             };
         }
 
@@ -375,12 +385,13 @@ namespace Services.Services
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
             // todo modify this Email body to send a URL redirect to the frontend page and contain the token as a parameter in the URL
-            await _emailService.SendEmailAsync(user.Email, "Reset your Password", $"Your token is {token}. The token will expire in 15 minutes.", true);
+            await _emailService.SendEmailAsync(user.Email!, "Reset your Password",
+                $"Your token is {token}. The token will expire in 15 minutes.", true);
 
             return new ResponseModel
             {
                 Status = true,
-                Message = "An Email has been sent, please check your inbox",
+                Message = "An email has been sent, please check your inbox",
             };
         }
 
@@ -397,21 +408,22 @@ namespace Services.Services
                 };
             }
 
-            var result = await _userManager.ResetPasswordAsync(user, accountResetPasswordModel.Token, accountResetPasswordModel.Password);
+            var result = await _userManager.ResetPasswordAsync(user, accountResetPasswordModel.Token,
+                accountResetPasswordModel.Password);
 
             if (result.Succeeded)
             {
                 return new ResponseModel
                 {
                     Status = true,
-                    Message = "Reset Password successfully",
+                    Message = "Reset password successfully",
                 };
             }
 
             return new ResponseModel
             {
                 Status = false,
-                Message = "Cannot reset Password",
+                Message = "Cannot reset password",
             };
         }
 
@@ -441,10 +453,12 @@ namespace Services.Services
                 };
             }
 
-            // Get User information with Google Access Token
-            var googleTokenModel = JsonConvert.DeserializeObject<GoogleTokenModel>(await googleTokenResponse.Content.ReadAsStringAsync());
+            // Get user information with Google access token
+            var googleTokenModel =
+                JsonConvert.DeserializeObject<GoogleTokenModel>(await googleTokenResponse.Content.ReadAsStringAsync());
             var userInfoClient = new HttpClient { BaseAddress = new Uri("https://www.googleapis.com/oauth2/v1/") };
-            HttpResponseMessage googleUserInformationResponse = await userInfoClient.GetAsync($"userinfo?access_token={googleTokenModel.AccessToken}");
+            HttpResponseMessage googleUserInformationResponse =
+                await userInfoClient.GetAsync($"userinfo?access_token={googleTokenModel!.AccessToken}");
 
             if (!googleUserInformationResponse.IsSuccessStatusCode)
             {
@@ -455,10 +469,12 @@ namespace Services.Services
                 };
             }
 
-            var googleUserInformationModel = JsonConvert.DeserializeObject<GoogleUserInformationModel>(await googleUserInformationResponse.Content.ReadAsStringAsync());
+            var googleUserInformationModel =
+                JsonConvert.DeserializeObject<GoogleUserInformationModel>(await googleUserInformationResponse.Content
+                    .ReadAsStringAsync());
 
             // Handle user information
-            var user = await _userManager.FindByEmailAsync(googleUserInformationModel.Email);
+            var user = await _userManager.FindByEmailAsync(googleUserInformationModel!.Email!);
 
             if (user == null)
             {
@@ -474,7 +490,7 @@ namespace Services.Services
 
                 if (saveUserResult.Succeeded)
                 {
-                    // Add Role
+                    // Add role
                     await _userManager.AddToRoleAsync(user, Repositories.Enums.Role.User.ToString());
                 }
                 else
@@ -482,18 +498,27 @@ namespace Services.Services
                     return new ResponseDataModel<TokenModel>
                     {
                         Status = false,
-                        Message = "Cannot create Account"
+                        Message = "Cannot create account"
                     };
                 }
             }
 
-            // JWT Token
-            var authClaims = new List<Claim>
+            if (user.IsDeleted)
+            {
+                return new ResponseDataModel<TokenModel>
                 {
-                    new Claim("userId", user.Id.ToString()),
-                    new Claim("userEmail", user.Email.ToString()),
-                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                    Status = false,
+                    Message = "Account has been deleted"
                 };
+            }
+
+            // JWT token
+            var authClaims = new List<Claim>
+            {
+                new Claim("userId", user.Id.ToString()),
+                new Claim("userEmail", user.Email!),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            };
 
             var userRoles = await _userManager.GetRolesAsync(user);
 
@@ -502,13 +527,13 @@ namespace Services.Services
                 authClaims.Add(new Claim(ClaimTypes.Role, userRole));
             }
 
-            // Check if Refresh Token is expired, if so then update
-            if (user.RefreshToken == null || user.RefreshTokenExpiryTime < DateTime.UtcNow)
+            // Check if refresh token is expired, if so then update
+            if (user.RefreshToken == null || user.RefreshTokenExpiryTime < DateTime.Now)
             {
                 var refreshToken = TokenTools.GenerateRefreshToken();
                 _ = int.TryParse(_configuration["JWT:RefreshTokenValidityInDays"], out int refreshTokenValidityInDays);
 
-                // Update User's Refresh Token
+                // Update user's refresh token
                 user.RefreshToken = refreshToken;
                 user.RefreshTokenExpiryTime = DateTime.Now.AddDays(refreshTokenValidityInDays);
 
