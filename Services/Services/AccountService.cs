@@ -11,6 +11,8 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Claims;
+using Repositories.Models.AccountModels;
+using Services.Common;
 using Services.Models.AccountModels;
 using Services.Models.ResponseModels;
 using Services.Models.TokenModels;
@@ -54,6 +56,7 @@ namespace Services.Services
             // Create new account
             var user = _mapper.Map<Account>(accountRegisterModel);
             user.UserName = user.Email;
+            user.CreationDate = DateTime.Now;
             user.VerificationCode = AuthenticationTools.GenerateVerificationCode(6);
             user.VerificationCodeExpiryTime = DateTime.Now.AddMinutes(15);
 
@@ -562,6 +565,225 @@ namespace Services.Services
                     AccessTokenExpiryTime = jwtToken.ValidTo.ToLocalTime(),
                     RefreshToken = user.RefreshToken,
                 }
+            };
+        }
+
+        public async Task<ResponseModel> AddAccounts(List<AccountRegisterModel> accountRegisterModels)
+        {
+            int count = 0;
+            foreach (var accountRegisterModel in accountRegisterModels)
+            {
+                // Check if email already exists
+                var existedEmail = await _userManager.FindByEmailAsync(accountRegisterModel.Email);
+
+                if (existedEmail == null)
+                {
+                    // Create new account
+                    var user = _mapper.Map<Account>(accountRegisterModel);
+                    user.UserName = user.Email;
+                    user.CreationDate = DateTime.Now;
+                    user.VerificationCode = AuthenticationTools.GenerateVerificationCode(6);
+                    user.VerificationCodeExpiryTime = DateTime.Now.AddMinutes(15);
+
+                    var result = await _userManager.CreateAsync(user, accountRegisterModel.Password);
+
+                    if (result.Succeeded)
+                    {
+                        // Add role
+                        await _userManager.AddToRoleAsync(user, Repositories.Enums.Role.User.ToString());
+
+                        // Email verification (disable this function if users are not required to verify their email)
+                        // await SendVerificationEmail(user);
+
+                        count++;
+                    }
+                }
+            }
+
+            return new ResponseModel
+            {
+                Status = true,
+                Message = $"Add {count} accounts successfully"
+            };
+        }
+
+        public async Task<ResponseDataModel<AccountModel>> GetAccount(Guid id)
+        {
+            var user = await _userManager.FindByIdAsync(id.ToString());
+
+            if (user == null)
+            {
+                return new ResponseDataModel<AccountModel>()
+                {
+                    Status = false,
+                    Message = "User not found"
+                };
+            }
+
+            var userModel = _mapper.Map<AccountModel>(user);
+            var role = await _userManager.GetRolesAsync(user);
+            userModel.Role = Enum.Parse(typeof(Repositories.Enums.Role), role[0]).ToString()!;
+
+            return new ResponseDataModel<AccountModel>()
+            {
+                Status = true,
+                Message = "Get account successfully",
+                Data = userModel
+            };
+        }
+
+        public async Task<Pagination<AccountModel>> GetAllAccounts(AccountFilterModel accountFilterModel)
+        {
+            var accountList = await _unitOfWork.AccountRepository.GetAllAsync(pageIndex: accountFilterModel.PageIndex,
+                pageSize: accountFilterModel.PageSize,
+                filter: (x =>
+                    x.IsDeleted == accountFilterModel.IsDeleted &&
+                    (accountFilterModel.Gender == null || x.Gender == accountFilterModel.Gender) &&
+                    (accountFilterModel.Role == null || x.Role == accountFilterModel.Role.ToString()) &&
+                    (string.IsNullOrEmpty(accountFilterModel.Search) ||
+                     x.FirstName!.ToLower().Contains(accountFilterModel.Search.ToLower()) ||
+                     x.LastName!.ToLower().Contains(accountFilterModel.Search.ToLower()) ||
+                     x.Email!.ToLower().Contains(accountFilterModel.Search.ToLower()))),
+                orderBy: (x =>
+                {
+                    switch (accountFilterModel.Order.ToLower())
+                    {
+                        case "first-name":
+                            return accountFilterModel.OrderByDescending
+                                ? x.OrderByDescending(x => x.FirstName)
+                                : x.OrderBy(x => x.FirstName);
+                        case "last-name":
+                            return accountFilterModel.OrderByDescending
+                                ? x.OrderByDescending(x => x.LastName)
+                                : x.OrderBy(x => x.LastName);
+                        case "date-of-birth":
+                            return accountFilterModel.OrderByDescending
+                                ? x.OrderByDescending(x => x.DateOfBirth)
+                                : x.OrderBy(x => x.DateOfBirth);
+                        default:
+                            return accountFilterModel.OrderByDescending
+                                ? x.OrderByDescending(x => x.CreationDate)
+                                : x.OrderBy(x => x.CreationDate);
+                    }
+                })
+            );
+
+            var accountModelList = _mapper.Map<List<AccountModel>>(accountList.Data);
+            return new Pagination<AccountModel>(accountModelList, accountList.TotalCount,
+                accountFilterModel.PageIndex,
+                accountFilterModel.PageSize);
+        }
+
+        public async Task<ResponseModel> UpdateAccount(Guid id, AccountUpdateModel accountUpdateModel)
+        {
+            var user = await _userManager.FindByIdAsync(id.ToString());
+
+            if (user == null)
+            {
+                return new ResponseModel
+                {
+                    Status = false,
+                    Message = "User not found"
+                };
+            }
+
+            user.FirstName = accountUpdateModel.FirstName;
+            user.LastName = accountUpdateModel.LastName;
+            user.Gender = accountUpdateModel.Gender;
+            user.DateOfBirth = accountUpdateModel.DateOfBirth;
+            user.Address = accountUpdateModel.Address;
+            user.Image = accountUpdateModel.Image;
+            user.PhoneNumber = accountUpdateModel.PhoneNumber;
+            user.ModificationDate = DateTime.Now;
+            user.ModifiedBy = _claimsService.GetCurrentUserId;
+
+            var result = await _userManager.UpdateAsync(user);
+
+            if (result.Succeeded)
+            {
+                return new ResponseModel
+                {
+                    Status = true,
+                    Message = "Update account successfully",
+                };
+            }
+
+            return new ResponseModel
+            {
+                Status = false,
+                Message = "Cannot update account",
+            };
+        }
+
+        public async Task<ResponseModel> DeleteAccount(Guid id)
+        {
+            var user = await _userManager.FindByIdAsync(id.ToString());
+
+            if (user == null)
+            {
+                return new ResponseModel
+                {
+                    Status = false,
+                    Message = "User not found"
+                };
+            }
+
+            user.IsDeleted = true;
+            user.DeletionDate = DateTime.Now;
+            user.DeletedBy = _claimsService.GetCurrentUserId;
+
+            var result = await _userManager.UpdateAsync(user);
+
+            if (result.Succeeded)
+            {
+                return new ResponseModel
+                {
+                    Status = true,
+                    Message = "Delete account successfully",
+                };
+            }
+
+            return new ResponseModel
+            {
+                Status = false,
+                Message = "Cannot delete account",
+            };
+        }
+
+        public async Task<ResponseModel> RestoreAccount(Guid id)
+        {
+            var user = await _userManager.FindByIdAsync(id.ToString());
+
+            if (user == null)
+            {
+                return new ResponseModel
+                {
+                    Status = false,
+                    Message = "User not found"
+                };
+            }
+
+            user.IsDeleted = false;
+            user.DeletionDate = null;
+            user.DeletedBy = null;
+            user.ModificationDate = DateTime.UtcNow;
+            user.ModifiedBy = _claimsService.GetCurrentUserId;
+
+            var result = await _userManager.UpdateAsync(user);
+
+            if (result.Succeeded)
+            {
+                return new ResponseModel
+                {
+                    Status = true,
+                    Message = "Restore account successfully",
+                };
+            }
+
+            return new ResponseModel
+            {
+                Status = false,
+                Message = "Cannot restore account",
             };
         }
     }

@@ -45,8 +45,8 @@ public class AccountStatusMiddleware : IMiddleware
 
                 return;
             }
-
-            await next(context);
         }
+
+        await next(context);
     }
 }

@@ -7,7 +7,7 @@ namespace Repositories.Interfaces
     public interface IGenericRepository<TEntity> where TEntity : BaseEntity
     {
         Task<TEntity?> GetAsync(Guid id, string include = "");
-        Task<List<TEntity>> GetAllAsync();
+        Task<List<TEntity>> GetAllAsync(string include = "");
 
         Task<QueryResultModel<List<TEntity>>> GetAllAsync(
             Expression<Func<TEntity, bool>>? filter = null,

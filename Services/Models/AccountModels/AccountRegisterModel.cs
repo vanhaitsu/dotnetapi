@@ -20,6 +20,8 @@ namespace Services.Models.AccountModels
         [Required(ErrorMessage = "Date of Birth is required")]
         public DateTime DateOfBirth { get; set; }
 
+        public string? Address { get; set; }
+
         [Required(ErrorMessage = "Phone number is required"), Phone(ErrorMessage = "Invalid phone format")]
         [StringLength(15, ErrorMessage = "Phone number must be no more than 15 characters")]
         public required string PhoneNumber { get; set; }

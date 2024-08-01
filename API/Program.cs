@@ -49,17 +49,17 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 });
 
 // Deploy Database
-//var connection = String.Empty;
-//if (builder.Environment.IsDevelopment())
-//{
-//    builder.Configuration.AddEnvironmentVariables().AddJsonFile("appsettings.Development.json");
-//    connection = builder.Configuration.GetConnectionString("DeployDB");
-//}
-//else
-//{
-//    connection = Environment.GetEnvironmentVariable("DeployDB");
-//}
-//builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(connection));
+// var connection = String.Empty;
+// if (builder.Environment.IsDevelopment())
+// {
+//     builder.Configuration.AddEnvironmentVariables().AddJsonFile("appsettings.Development.json");
+//     connection = builder.Configuration.GetConnectionString("DeployDB");
+// }
+// else
+// {
+//     connection = Environment.GetEnvironmentVariable("DeployDB");
+// }
+// builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(connection));
 
 
 // Add API Configuration
@@ -114,11 +114,11 @@ var app = builder.Build();
 app.UseCors("cors");
 
 // Initial Seeding
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    await InitialSeeding.Initialize(services);
-}
+// using (var scope = app.Services.CreateScope())
+// {
+//     var services = scope.ServiceProvider;
+//     await InitialSeeding.Initialize(services);
+// }
 
 // Middleware
 app.UseMiddleware<GlobalExceptionMiddleware>();

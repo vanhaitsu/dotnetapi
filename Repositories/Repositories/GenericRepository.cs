@@ -34,9 +34,17 @@ namespace Repositories.Repositories
             return result;
         }
 
-        public virtual async Task<List<TEntity>> GetAllAsync()
+        public virtual async Task<List<TEntity>> GetAllAsync(string include = "")
         {
-            return await _dbSet.ToListAsync();
+            IQueryable<TEntity> query = _dbSet;
+            
+            foreach (var includeProperty in include.Split
+                         (new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                query = query.Include(includeProperty.Trim());
+            }
+            
+            return await query.ToListAsync();
         }
 
         public virtual async Task<QueryResultModel<List<TEntity>>> GetAllAsync(

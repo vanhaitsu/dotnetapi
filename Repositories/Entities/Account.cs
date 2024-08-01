@@ -21,7 +21,7 @@ namespace Repositories.Entities
 		public DateTime? VerificationCodeExpiryTime { get; set; }
 
 		// Base Entity
-		// note: This class cannot inherit from 2 classes (BaseEntity, IdentityUser) at the same 
+		// Note: This class cannot inherit from 2 classes (BaseEntity, IdentityUser) at the same 
 		public DateTime CreationDate { get; set; }
 		public Guid? CreatedBy { get; set; }
 		public DateTime? ModificationDate { get; set; }
