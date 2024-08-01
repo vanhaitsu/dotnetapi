@@ -114,11 +114,11 @@ var app = builder.Build();
 app.UseCors("cors");
 
 // Initial Seeding
-// using (var scope = app.Services.CreateScope())
-// {
-//     var services = scope.ServiceProvider;
-//     await InitialSeeding.Initialize(services);
-// }
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    await InitialSeeding.Initialize(services);
+}
 
 // Middleware
 app.UseMiddleware<GlobalExceptionMiddleware>();

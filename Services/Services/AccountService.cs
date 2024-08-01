@@ -165,7 +165,7 @@ namespace Services.Services
             return new ResponseDataModel<TokenModel>
             {
                 Status = false,
-                Message = "Cannot login"
+                Message = "Invalid email or password"
             };
         }
 
@@ -582,8 +582,8 @@ namespace Services.Services
                     var user = _mapper.Map<Account>(accountRegisterModel);
                     user.UserName = user.Email;
                     user.CreationDate = DateTime.Now;
-                    user.VerificationCode = AuthenticationTools.GenerateVerificationCode(6);
-                    user.VerificationCodeExpiryTime = DateTime.Now.AddMinutes(15);
+                    // user.VerificationCode = AuthenticationTools.GenerateVerificationCode(6);
+                    // user.VerificationCodeExpiryTime = DateTime.Now.AddMinutes(15);
 
                     var result = await _userManager.CreateAsync(user, accountRegisterModel.Password);
 
